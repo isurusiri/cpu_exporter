@@ -8,14 +8,16 @@ import (
 	"time"
 )
 
+// CPUStat contains the metrics and other information that is going
+// to exposed from the exporter.
 type CPUStat struct {
-	Idle                  uint64
-	Total                 uint64
-	LastIdle              uint64
-	LastTotal             uint64
-	Utilization           uint64
-	ReadAt                time.Time
-	DureationFromLastRead time.Duration
+	Idle                     uint64
+	Total                    uint64
+	LastIdle                 uint64
+	LastTotal                uint64
+	Utilization              float64
+	ReadAt                   time.Time
+	DurationOfTheUtilization string
 }
 
 func getCPUStats() (idle, total uint64) {
@@ -43,4 +45,51 @@ func getCPUStats() (idle, total uint64) {
 		}
 	}
 	return
+}
+
+// New create and return an instance of CPUStat
+func New() *CPUStat {
+	currentIdle, currentTotal := getCPUStats()
+
+	cpuStat := &CPUStat{
+		Idle:                     currentIdle,
+		Total:                    currentTotal,
+		LastIdle:                 0,
+		LastTotal:                0,
+		Utilization:              float64(0),
+		ReadAt:                   time.Now(),
+		DurationOfTheUtilization: "0",
+	}
+
+	return cpuStat
+}
+
+// GetCPUStats returns current CPU Stats
+func (cpuStats *CPUStat) GetCPUStats() {
+	currentIdle, currentTotal := getCPUStats()
+
+	// switch previous current stats to last stats
+	cpuStats.LastIdle = cpuStats.Idle
+	cpuStats.LastTotal = cpuStats.Total
+
+	// assigns current stats
+	cpuStats.Idle = currentIdle
+	cpuStats.Total = currentTotal
+
+	cpuStats.Utilization = getCPUUtilization(cpuStats.Idle, cpuStats.Total, cpuStats.LastIdle, cpuStats.LastTotal)
+
+	cpuStats.DurationOfTheUtilization = calcDuration(cpuStats.ReadAt)
+	cpuStats.ReadAt = time.Now()
+
+}
+
+func getCPUUtilization(idle, total, lastIdle, lasstTotal uint64) float64 {
+	idleTicks := float64(idle - lastIdle)
+	totalTicks := float64(total - lasstTotal)
+
+	return 100 * (totalTicks - idleTicks) / totalTicks
+}
+
+func calcDuration(lastReadTime time.Time) string {
+	return time.Now().Sub(lastReadTime).String()
 }
