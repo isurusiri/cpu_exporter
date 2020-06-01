@@ -13,8 +13,13 @@ type CPUMetrics struct {
 }
 
 // New craetes a new CPU metrics instance
-func New() {
+func New() *CPUMetrics {
 	// craete a new CPU metrics instance
+	return &CPUMetrics{
+		cupIdle:        prometheus.NewGauge(),
+		cpuTotal:       prometheus.NewGauge(),
+		cpuUtilization: prometheus.NewGauge(),
+	}
 }
 
 // Init initializes the metrics scraping
