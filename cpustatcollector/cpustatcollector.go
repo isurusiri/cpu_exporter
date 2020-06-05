@@ -1,6 +1,7 @@
 package cpustatcollector
 
 import (
+	"github.com/isurusiri/cpu_exporter/cpuclient"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -14,12 +15,11 @@ type CPUMetrics struct {
 
 // CPUCollector represents CPU Collector object
 type CPUCollector struct {
-	cpuMetrics CPUMetrics
-	// cpuClient  cpu_client.CPUStat
+	cpuMetrics *CPUMetrics
+	cpuStats   *cpuclient.CPUStat
 }
 
-// New craetes a new CPU metrics instance
-func New() *CPUMetrics {
+func newCPUMetrics() *CPUMetrics {
 	return &CPUMetrics{
 		cupIdle: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "cpu_exporter_cpu_idle_time",
@@ -36,12 +36,29 @@ func New() *CPUMetrics {
 	}
 }
 
+// New craetes a new CPU collector instance
+func New() *CPUCollector {
+	cpuMetrics := newCPUMetrics()
+	cpuStats := cpuclient.New()
+
+	return &CPUCollector{
+		cpuMetrics: cpuMetrics,
+		cpuStats:   cpuStats,
+	}
+}
+
 // Init initializes the metrics scraping
-func Init() {
-	// initialize the metrics scraping
+func (cpuCollector *CPUCollector) Init() {
+	prometheus.MustRegister(cpuCollector.cpuMetrics.cpuTotal)
+	prometheus.MustRegister(cpuCollector.cpuMetrics.cpuUtilization)
+	prometheus.MustRegister(cpuCollector.cpuMetrics.cupIdle)
 }
 
 // Collect collects metrics from the client periodically
-func Collect() {
-	// collects metrics from the client periodically
+func (cpuCollector *CPUCollector) Collect() {
+	cpuCollector.cpuStats.GetCPUStats()
+
+	cpuCollector.cpuMetrics.cpuTotal.Set(float64(cpuCollector.cpuStats.Total))
+	cpuCollector.cpuMetrics.cupIdle.Set(float64(cpuCollector.cpuStats.Idle))
+	cpuCollector.cpuMetrics.cpuUtilization.Set(cpuCollector.cpuStats.Utilization)
 }
